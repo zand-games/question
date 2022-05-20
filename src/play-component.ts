@@ -64,13 +64,12 @@ export class PlayComponent extends LitElement {
 
   render() {
     return html`
-      <button @click="${this.record}" id="btnPlay">Play!</button>
       <!-- <label id="lbltalk">Please Talk!</label>
       <div class="texts"></div> -->
 
-      <body class="container pt-5 bg-dark">
-        <div class="mt-4" id="div_language">
-          <h2 class="mb-3 text-light">Select Language</h2>
+      <div class="header">
+        <div>
+          <h2>Select Language</h2>
           <select
             class="form-select bg-secondary text-light"
             id="select_language"
@@ -81,8 +80,12 @@ export class PlayComponent extends LitElement {
             id="select_dialect"
           ></select>
         </div>
-        <h2 class="mt-4 text-light">Questions</h2>
-      </body>
+        <div>
+          <button @click="${this.record}" id="btnPlay">Play!</button>
+        </div>
+      </div>
+      <h2 class="mt-4 text-light">Questions</h2>
+
       <div class="questions">
         ${this.questions.map((item) => html`<p class="qitem">${item}</p>`)}
         <span id="final" class="text-light"></span>
@@ -176,8 +179,24 @@ export class PlayComponent extends LitElement {
 
   static get styles() {
     return [
-      boot,
       css`
+        .header {
+          /* display: grid;
+          grid-template-columns: repeat(2, auto, auto); */
+        }
+        select {
+          background-color: #197764;
+          color: #fff;
+          font-size: inherit;
+          padding: 0.5em;
+          padding-right: 2.5em;
+          border: 0;
+          margin: 0;
+          border-radius: 3px;
+          text-indent: 0.01px;
+          text-overflow: "";
+          -webkit-appearance: button; /* hide default arrow in chrome OSX */
+        }
         button {
           color: #08233e;
           font: 1.4em Futura, ‘Century Gothic’, AppleGothic, sans-serif;
