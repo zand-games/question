@@ -1,14 +1,9 @@
 import { LitElement, html, css, PropertyValueMap } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import boot from "./bootstrap";
 import languages from "./languages.js";
-
 import speechrecognition from "./speech-recognition.js";
-export interface IWindow extends Window {
-  webkitSpeechRecognition: any;
-}
-const { webkitSpeechRecognition }: IWindow = window as any;
-
+import { GameStore } from "./store";
+import { StoreSubscriber } from "lit-svelte-stores";
 @customElement("play-component")
 export class PlayComponent extends LitElement {
   @property()
@@ -19,6 +14,8 @@ export class PlayComponent extends LitElement {
 
   @property()
   speechRecognition: any;
+
+  game = new StoreSubscriber(this, () => GameStore);
 
   firstUpdated() {
     var select_dialect = this.shadowRoot.querySelector(
@@ -44,6 +41,19 @@ export class PlayComponent extends LitElement {
     this.speechRecognition.addEventListener("result", (event) =>
       this.voice_to_text(event)
     );
+
+    this.speechRecognition.addEventListener(
+      "start",
+      (event) => (this.game.value.play = true)
+    );
+    this.speechRecognition.addEventListener("error", (event) => {
+      this.game.value.play = false;
+      console.log(event);
+    });
+    this.speechRecognition.addEventListener(
+      "end",
+      (event) => (this.game.value.play = false)
+    );
   }
 
   voice_to_text(event) {
@@ -51,24 +61,19 @@ export class PlayComponent extends LitElement {
 
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        console.log(this.questions);
         this.questions = [...this.questions, event.results[i][0].transcript];
       } else {
         interim_transcript += event.results[i][0].transcript;
-        console.log(event.results[i][0].transcript);
       }
     }
-    //document.querySelector("#final").innerHTML = final_transcript;
     this.shadowRoot.querySelector("#interim").innerHTML = interim_transcript;
+    window.scrollTo(0, document.body.scrollHeight);
   }
 
   render() {
     return html`
-      <!-- <label id="lbltalk">Please Talk!</label>
-      <div class="texts"></div> -->
-
-      <div class="header">
-        <div>
+      <div class="container" disabled=${this.disabled()}>
+        <div class="lang">
           <h2>Select Language</h2>
           <select
             class="form-select bg-secondary text-light"
@@ -80,11 +85,15 @@ export class PlayComponent extends LitElement {
             id="select_dialect"
           ></select>
         </div>
-        <div>
-          <button @click="${this.record}" id="btnPlay">Play!</button>
+        <div class="controls">
+          <div disabled="${this.disabled()}">
+            <button @click="${this.play}" id="btnPlay">Play!</button>
+            ${this.game.value.play == true
+              ? html`<label id="lbltalk">Recording...</label>`
+              : ""}
+          </div>
         </div>
       </div>
-      <h2 class="mt-4 text-light">Questions</h2>
 
       <div class="questions">
         ${this.questions.map((item) => html`<p class="qitem">${item}</p>`)}
@@ -93,7 +102,10 @@ export class PlayComponent extends LitElement {
       </div>
     `;
   }
-
+  gameInterval = null;
+  disabled() {
+    return this.game.value.play || this.game.value.round == 0 ? "disabled" : "";
+  }
   updateCountry() {
     var select_dialect = this.shadowRoot.querySelector(
       "#select_dialect"
@@ -116,71 +128,35 @@ export class PlayComponent extends LitElement {
     this.language = select_dialect.value;
   }
 
-  record() {
-    //print("hi there");
-
+  play() {
+    this.questions = [];
     this.speechRecognition.start();
-    return;
-
-    const speechRecognition = new webkitSpeechRecognition();
-    //  debugger;
-    if (speechRecognition) {
-      // let speechRecognition: any = new webkitSpeechRecognition();
-      let final_transcript = "";
-
-      speechRecognition.continuous = true;
-      speechRecognition.interimResults = true;
-      // speechRecognition.lang = (
-      //   this.shadowRoot.querySelector("#select_dialect") as HTMLSelectElement
-      // ).value;
-
-      speechRecognition.onstart = () => {
-        // document.querySelector("#status").style.display = "block";
-        console.log("started..");
-      };
-      speechRecognition.onerror = () => {
-        // document.querySelector("#status").style.display = "none";
-        console.log("Speech Recognition Error");
-      };
-      speechRecognition.onend = () => {
-        // document.querySelector("#status").style.display = "none";
-        console.log("Speech Recognition Ended");
-      };
-
-      speechRecognition.onresult = (event) => {
-        let interim_transcript = "";
-        console.log(event);
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            final_transcript += event.results[i][0].transcript;
-          } else {
-            interim_transcript += event.results[i][0].transcript;
-          }
-        }
-        this.shadowRoot.querySelector("#final").innerHTML = final_transcript;
-        this.shadowRoot.querySelector("#interim").innerHTML =
-          interim_transcript;
-      };
-
-      alert(123);
-      //
-      // (this.shadowRoot.querySelector("#start") as HTMLButtonElement).onclick =
-      //   () => {
-      //     console.log("start");
-      //     speechRecognition.start();
-      //   };
-      // document.querySelector("#stop").onclick = () => {
-      //   speechRecognition.stop();
-      // };
-    } else {
-      console.log("Speech Recognition Not Available");
-    }
+    this.gameInterval = setInterval(() => {
+      if (this.game.value.round > 0) {
+        GameStore.update((val) => {
+          val.round = Number(val.round) - 1;
+          return val;
+        });
+      } else {
+        clearInterval(this.gameInterval);
+        this.speechRecognition.stop();
+        GameStore.update((val) => {
+          val.play = false;
+          return val;
+        });
+        alert("Round is finished!");
+      }
+    }, 1000);
   }
 
   static get styles() {
     return [
       css`
-        .header {
+        div[disabled="disabled"] {
+          pointer-events: none;
+          opacity: 0.4;
+        }
+        .container {
           /* display: grid;
           grid-template-columns: repeat(2, auto, auto); */
         }
@@ -195,15 +171,15 @@ export class PlayComponent extends LitElement {
           border-radius: 3px;
           text-indent: 0.01px;
           text-overflow: "";
-          -webkit-appearance: button; /* hide default arrow in chrome OSX */
+          -webkit-appearance: button;
         }
         button {
           color: #08233e;
           font: 1.4em Futura, ‘Century Gothic’, AppleGothic, sans-serif;
           padding: 14px;
-          background: url(overlay.png) repeat-x center #ffcc00;
-          background-color: rgba(255, 204, 0, 1);
-          border: 1px solid #ffcc00;
+
+          background-color: #34b3b3;
+          border: 1px solid 34b3b3;
           -moz-border-radius: 10px;
           -webkit-border-radius: 10px;
           border-radius: 10px;
@@ -215,12 +191,15 @@ export class PlayComponent extends LitElement {
           align-items: flex-start;
           margin-bottom: 20px;
         }
+
+        .controls {
+          margin-top: 0.8em;
+        }
         #lbltalk {
           text-align: right;
           color: rgb(255, 255, 255);
           width: 100%;
           margin-bottom: 10px;
-          display: block;
           margin-left: 50px;
           font-size: 1.5em;
           animation: animate 1.5s linear infinite;
@@ -241,19 +220,26 @@ export class PlayComponent extends LitElement {
         }
 
         .questions {
-          border: 1px solid gray;
+          /* border: 1px solid gray;
           height: 300px;
-          border-radius: 8px;
+          border-radius: 8px; */
+          align-items: center;
+          text-align: center;
         }
-
+        #interim {
+          font-family: "Montserrat";
+          font-size: 1.5em;
+        }
         .qitem {
           color: black;
           text-align: left;
-          width: 100%;
-          background-color: white;
+          width: 98%;
+          font-family: "Montserrat";
+          font-size: 1.1em;
+          background-color: #cfdfdd;
           padding: 10px;
           border-radius: 8px;
-          margin-bottom: 10px;
+          margin: 0.9em;
         }
       `,
     ];

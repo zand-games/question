@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Question Game</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="Description" content="Put your description here." />
+    <base href="/" />
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      html {
+        font-family: Montserrat;
+      }
+    </style>
+    <title>question-game</title>
+  </head>
+  <body>
+    <game-app></game-app>
+    <script type="module" src="./game-app.js"></script>
+    <script inject-service-worker="">
+      "serviceWorker" in navigator &&
+        window.addEventListener("load", function () {
+          navigator.serviceWorker
+            .register("../dist/sw.js")
+            .then(function () {
+              console.log('ServiceWorker registered from "../dist/sw.js".');
+            })
+            .catch(function (e) {
+              console.log("ServiceWorker registration failed: ", e);
+            });
+        });
+    </script>
+  </body>
+</html>

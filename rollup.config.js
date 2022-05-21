@@ -10,7 +10,7 @@ export default {
   input: "index.html",
   output: {
     format: "es",
-    dir: "dist",
+    dir: "game",
   },
   preserveEntrySignatures: false,
 

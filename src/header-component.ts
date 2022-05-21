@@ -7,7 +7,6 @@ export class HeaderComponent extends LitElement {
     return html`
       <h1>Question Game<br /></h1>
       <p>Only available in Chrome</p>
-      <p>Just ask question</p>
     `;
   }
 
